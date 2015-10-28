@@ -120,7 +120,7 @@ class Opscli(Cmd):
     def dump_tree(self, cmdobj, level=0):
         dbg("%s%s %s %s" % ('    ' * level, ' '.join(cmdobj.command),
                             cmdobj.options, cmdobj.flags))
-        for cmd in cmdobj.branch.keys():
+        for cmd in cmdobj.branch:
             self.dump_tree(cmdobj.branch[cmd], level + 1)
 
     def start_shell(self):
@@ -163,7 +163,7 @@ class Opscli(Cmd):
     # returns Command object, or None if not found.
     # TODO Currently unused.
     def find_command(self, cmdobj, words):
-        if words[0] in cmdobj.branch.keys():
+        if words[0] in cmdobj.branch:
             if len(words) == 1:
                 # Found a complete match on all words.
                 return cmdobj.branch[words[0]]
@@ -177,11 +177,11 @@ class Opscli(Cmd):
     # Traverse tree starting at cmdobj to find a command for which all words
     # are at least a partial match. Returns list of Command objects that match.
     def find_partial_command(self, cmdobj, words, matches):
-        if len(cmdobj.branch.keys()) == 0:
+        if len(cmdobj.branch) == 0:
             # This branch is a complete match for all words.
             matches.append(cmdobj)
             return matches
-        for key in cmdobj.branch.keys():
+        for key in cmdobj.branch:
             if key.startswith(words[0]):
                 # word is a partial match for this command.
                 if len(words) == 1:
@@ -280,7 +280,7 @@ class Opscli(Cmd):
                 return None
             # We have matching words, and need to list what can follow them.
             cli_out('')
-            out_cols(matches[0].branch.keys())
+            out_cols(matches[0].branch)
             cli_wrt(self.prompt + line)
             completion = None
         else:

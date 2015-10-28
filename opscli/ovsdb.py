@@ -124,7 +124,7 @@ class Ovsdb:
                 break
         if response['error'] is not None:
             raise Exception(response['error'])
-        elif 'error' in response['result'][0].keys():
+        elif 'error' in response['result'][0]:
             raise Exception(response['result'][0])
         return response['result'][0]['rows']
 
