@@ -13,9 +13,8 @@
 #  License for the specific language governing permissions and limitations
 #  under the License.
 
-from opscli.output import cli_out, cli_warn, cli_err
+from opscli.output import cli_out
 from opscli.cli import Command
-from opscli.tokens import TString
 from opscli.debug import debug_available, debug_enabled
 from opscli.debug import debug_enable, debug_disable
 

@@ -16,7 +16,6 @@
 import sys
 import os
 from cmd import Cmd
-import platform
 import readline
 from collections import OrderedDict
 
