@@ -90,7 +90,7 @@ class Ovsdb:
                 results = json.loads(data)
                 # If we made it here, we have a valid JSON block.
                 break
-            except Exception as e:
+            except Exception:
                 # Didn't parse, incomplete.
                 pass
         return results
@@ -109,7 +109,7 @@ class Ovsdb:
         transact = {
             "method": "transact",
             "params": [database, operations],
-            "id": self.seq
+            "id": seq
         }
         return transact
 
