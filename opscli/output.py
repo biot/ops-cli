@@ -16,6 +16,15 @@
 import sys
 from collections import OrderedDict as OD
 
+CLI_MSG_MOTD = 'OpenSwitch shell'
+
+CLI_ERR_NOCOMMAND = '% No such command.'
+CLI_ERR_INCOMPLETE = '% Incomplete command.'
+CLI_ERR_BADOPTION = '% Invalid option'
+CLI_ERR_NOMATCH = '% There is no matched command.'
+CLI_ERR_AMBIGUOUS = '% Ambiguous command.'
+CLI_ERR_NOHELP_UNK = '% No help available: unknown command.'
+
 _keymaps = {
     'system': OD([
         ('vendor', 'Vendor'),
@@ -61,21 +70,22 @@ _keymaps = {
 }
 
 
-def cli_out(msg):
+def cli_out(msg=''):
     print msg
 
 
 def cli_wrt(msg):
     '''cli_out() without added linefeed.'''
     sys.stdout.write(msg)
+    sys.stdout.flush()
 
 
 def cli_warn(msg):
-    cli_out("warning: " + msg)
+    cli_out('warning: ' + msg)
 
 
 def cli_err(msg):
-    cli_out("error: " + msg)
+    cli_out(msg)
 
 
 def out_kv(keymap_name, data):
@@ -93,6 +103,18 @@ def out_kv(keymap_name, data):
             cli_out("  %-*s: %s" % (max_field_len, keymap[key], data[key]))
 
 
+# TODO adjust width of left column to longest command
+def cli_help(items, end='\n'):
+    for command, help_text in items:
+        cli_wrt("  %-20s %s%s" % (command, help_text, end))
+
+
 # TODO pretty columns
+def fmt_cols(data):
+    '''Arrange strings into columns depending on terminal width and the
+    longest string.'''
+    return '    '.join(data)
+
+
 def out_cols(data):
-    cli_out('    '.join(data))
+    cli_out(fmt_cols(data))
