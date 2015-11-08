@@ -29,6 +29,9 @@ from opscli.debug import logline, debug_is_on
 
 PROMPT_READ = '> '
 PROMPT_WRITE = '# '
+HISTORY_FILE = '~/.opscli_history'
+# Number of lines to remember across sessions.
+HISTORY_SIZE = 1000
 DEBUG_TRACEBACK = False
 
 
@@ -71,6 +74,7 @@ class Opscli(HistoricalReader):
             self.dump_tree(self.cmdtree)
         self.init_qhelp()
         self.init_completion()
+        self.init_history()
 
     def init_qhelp(self):
         class rdr_qhelp(pyrepl.commands.Command):
@@ -176,6 +180,11 @@ class Opscli(HistoricalReader):
         self.last_event = cmd.event_name
         super(Opscli, self).after_command(cmd)
 
+    def init_history(self):
+        histfile = os.path.expanduser(HISTORY_FILE)
+        if os.path.exists(histfile):
+            self.history = open(histfile).read().split('\n')[:-1]
+
     def inline(self, text):
         '''Write text on the next line and reproduce the prompt and entered
         text without submitting it.'''
@@ -269,6 +278,12 @@ class Opscli(HistoricalReader):
             except KeyboardInterrupt:
                 # ctrl-c throws away the current line and prompts again.
                 cli_out('^C')
+        # Save this session's history.
+        histfile = os.path.expanduser(HISTORY_FILE)
+        f = open(histfile, 'w')
+        f.write('\n'.join(self.history[-HISTORY_SIZE:]))
+        f.write('\n')
+        f.close()
 
     def process_line(self, line):
         words = line.split()
