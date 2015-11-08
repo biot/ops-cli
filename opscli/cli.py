@@ -19,6 +19,7 @@ from collections import OrderedDict
 
 from pyrepl.reader import Reader
 from pyrepl.unix_console import UnixConsole
+from pyrepl.historical_reader import HistoricalReader
 import pyrepl.commands
 
 from opscli.output import *
@@ -35,7 +36,7 @@ def dbg(msg):
     logline('cli', msg)
 
 
-class Opscli(Reader):
+class Opscli(HistoricalReader):
     '''
     This class extends pyrepl's Reader to provide command modules.
     '''
