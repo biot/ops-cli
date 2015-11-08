@@ -68,6 +68,68 @@ class Opscli(Reader):
                 self.load_module(filename)
         if debug_is_on('cli'):
             self.dump_tree(self.cmdtree)
+        self.init_completion()
+
+    def init_completion(self):
+        class rdr_complete(pyrepl.commands.Command):
+            # Make Opscli instance available at Reader key callback time.
+            cli = self
+            def do(self):
+                line = ''.join(self.reader.buffer)
+                try:
+                    self.cli.complete(line)
+                except Exception as e:
+                    cli_wrt(str(e) + '\r\n')
+        self.bind(r'\t', 'complete')
+        self.commands['complete'] = rdr_complete
+
+    def complete(self, line):
+        if not line:
+            return
+        words = line.split()
+        matches = self.find_partial_command(self.cmdtree, words, [])
+        if not matches:
+            return
+        items = []
+        if line[-1].isspace():
+            if len(matches) != 1:
+                # The line doesn't add up to an unambiguous command.
+                return
+            # We have matching words, and only need to list arguments.
+            items = matches[0].branch.keys()
+            if not items:
+                # No more command branches off of this one. Maybe it
+                # has some options?
+                items = matches[0].options
+        else:
+            # Completing a word.
+            if len(matches) == 1:
+                # Found exactly one completion.
+                cmpl_word = matches[0].command[len(words) -1]
+                cmpl = cmpl_word[len(words[-1]):]
+                self.insert(cmpl + ' ')
+            else:
+                # More than one match. Ignore the first completion attempt,
+                # and list all possible completions on every tab afterwards.
+                if self.last_event == 'complete':
+                    for cmdobj in matches:
+                        items.append(' '.join(cmdobj.command))
+        if items:
+            self.inline(fmt_cols(items))
+
+    def after_command(self, cmd):
+        # This has the callback names e.g. 'qhelp', 'complete' etc.
+        self.last_event = cmd.event_name
+        super(Opscli, self).after_command(cmd)
+
+    def inline(self, text):
+        '''Write text on the next line and reproduce the prompt and entered
+        text without submitting it.'''
+        cli_wrt('\r\n')
+        cli_wrt(text.replace('\n', '\r\n'))
+        cli_wrt('\r\n')
+        cli_wrt(self.prompt)
+        cli_wrt(''.join(self.buffer))
 
     def helpline(self, cmdobj, prefix=None):
         if prefix:
