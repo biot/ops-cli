@@ -15,11 +15,13 @@
 
 import sys
 import os
-from cmd import Cmd
-import readline
 from collections import OrderedDict
 
-from opscli.output import cli_out, out_cols, cli_wrt, cli_warn, cli_err
+from pyrepl.reader import Reader
+from pyrepl.unix_console import UnixConsole
+import pyrepl.commands
+
+from opscli.output import *
 from opscli.tokens import Token, TKeyword
 import opscli.ovsdb as ovsdb
 from opscli.debug import logline, debug_is_on
@@ -28,22 +30,20 @@ PROMPT_READ = '> '
 PROMPT_WRITE = '# '
 DEBUG_TRACEBACK = False
 
-_builtin_commands = ('quit', 'EOF')
-
 
 def dbg(msg):
     logline('cli', msg)
 
 
-class Opscli(Cmd):
+class Opscli(Reader):
     '''
-    This class extends Python's Cmd to provide command modules.
+    This class extends pyrepl's Reader to provide command modules.
     '''
     def __init__(self, ovsdb_server, command_module_paths=None):
-        Cmd.__init__(self)
+        super(Opscli, self).__init__(UnixConsole())
         # Initialize the OVSDB helper.
         ovsdb.Ovsdb(server=ovsdb_server)
-        self.motd = "OpenSwitch shell"
+        self.motd = CLI_MSG_MOTD
         self.base_prompt = 'Openswitch'
         try:
             results = ovsdb.get_map('System', column='mgmt_intf_status')
@@ -55,8 +55,8 @@ class Opscli(Cmd):
         self.prompt_mode = PROMPT_READ
         self.prompt = self.base_prompt + self.prompt_mode
         # Top of the command tree.
-        self.commands = Command()
-        self.commands.command = ('root', )
+        self.cmdtree = Command()
+        self.cmdtree.command = ('root', )
         for path in command_module_paths:
             if not os.path.isdir(path):
                 cli_warn("Ignoring invalid module path '%s'." % path)
@@ -67,7 +67,14 @@ class Opscli(Cmd):
                     continue
                 self.load_module(filename)
         if debug_is_on('cli'):
-            self.dump_tree(self.commands)
+            self.dump_tree(self.cmdtree)
+
+    def helpline(self, cmdobj, prefix=None):
+        if prefix:
+            words = cmdobj.command[len(prefix):]
+        else:
+            words = cmdobj.command
+        return (' '.join(words), cmdobj.__doc__)
 
     def check_module(self, module):
         if not hasattr(module, 'commands'):
@@ -102,7 +109,7 @@ class Opscli(Cmd):
     # Instantiate a Command object in the right place in the command tree.
     def insert_command(self, cmdclass):
         prev = None
-        cur = self.commands
+        cur = self.cmdtree
         for word in cmdclass.command:
             branch = self.find_branch(cur, word)
             prev = cur
@@ -123,41 +130,45 @@ class Opscli(Cmd):
         for cmd in cmdobj.branch:
             self.dump_tree(cmdobj.branch[cmd], level + 1)
 
+    def error(self, msg):
+        '''This gets messages from pyrepl's edit commands, nothing you
+        want to see displayed. However they're the sort of thing that
+        cause readline to send a beep.'''
+        self.console.beep()
+
     def start_shell(self):
         cli_out(self.motd)
         while True:
             try:
-                Cmd.cmdloop(self)
+                while True:
+                    self.ps1 = self.base_prompt + self.prompt_mode
+                    line = self.readline()
+                    if not self.process_line(line):
+                        # Received quit, ctrl-d etc.
+                        break
+                break
+            except EOFError:
+                # ctrl-d quits the shell.
                 break
             except KeyboardInterrupt:
-                # ctrl-c throws away the current line and prompts again
+                # ctrl-c throws away the current line and prompts again.
                 cli_out('^C')
 
-    def precmd(self, line):
+    def process_line(self, line):
         words = line.split()
         dbg(words)
-        if len(words) == 1 and words[0] in _builtin_commands:
-            return line
         if words:
             try:
-                self.run_command(words)
+                if words == ['quit']:
+                    return False
+                else:
+                    return self.run_command(words)
             except Exception as e:
                 if DEBUG_TRACEBACK:
                     raise
                 else:
                     cli_err(str(e))
-        self.prompt = self.base_prompt + self.prompt_mode
-        return ''
-
-    def emptyline(self):
-        pass
-
-    def do_quit(self, args):
         return True
-
-    def do_EOF(self, args):
-        cli_out('')
-        return self.do_quit(None)
 
     # Traverse tree starting at cmdobj to find a command consisting of words.
     # returns Command object, or None if not found.
@@ -217,33 +228,29 @@ class Opscli(Cmd):
                     opts[w] = option_type(words[w])
         if None in opts:
             # Something didn't get tokenized.
-            raise Exception("invalid option %s" % words[opts.index(None)])
+            raise Exception(CLI_ERR_BADOPTION + "%s." % words[opts.index(None)])
 
         return opts
 
     def run_command(self, words):
         if words[0] == 'help':
-            if len(words) == 1:
-                for key in self.commands.branch:
-                    self.show_help_subtree(self.commands.branch[key])
-            else:
-                self.show_help(words[1:])
-            return ''
+            self.show_help(words[1:])
+            return True
 
         flags = []
         # Negated commands are in the tree without the leading 'no'.
         if words[0] == 'no':
             flags.append(words.pop(0))
 
-        matches = self.find_partial_command(self.commands, words, [])
+        matches = self.find_partial_command(self.cmdtree, words, [])
         if len(matches) == 0 or len(matches) > 1:
             # Either nothing matched, or more than one command matched.
-            raise Exception("no such command")
+            raise Exception(CLI_ERR_NOCOMMAND)
         cmdobj = matches.pop()
 
         if not hasattr(cmdobj, 'run'):
             # Dummy command node, such as 'show'.
-            raise Exception("incomplete command")
+            raise Exception(CLI_ERR_INCOMPLETE)
 
         opts = []
         if len(cmdobj.command) != len(words):
@@ -255,7 +262,7 @@ class Opscli(Cmd):
         for flag in flags:
             if flag not in cmdobj.flags:
                 # Something was flagged, but the command doesn't allow it.
-                raise Exception("no such command")
+                raise Exception(CLI_ERR_NOCOMMAND)
         try:
             # Run command.
             cmdobj.run(opts, flags)
@@ -264,48 +271,32 @@ class Opscli(Cmd):
                 raise
             else:
                 cli_err(str(e))
-        # Return to Cmd module as handled.
-        return ''
 
-    def complete(self, text, state):
-        line = readline.get_line_buffer()
-        if line:
-            words = line.split()
-            matches = self.find_partial_command(self.commands, words, [])
-        else:
-            # Empty line, get list of matches from the tree root.
-            matches = [self.commands]
-        if not line or line[-1].isspace():
-            if len(matches) != 1:
-                return None
-            # We have matching words, and need to list what can follow them.
-            cli_out('')
-            out_cols(matches[0].branch)
-            cli_wrt(self.prompt + line)
-            completion = None
-        else:
-            if len(matches) < state + 1:
-                # No more matches.
-                return None
-            completion = matches[state].command[len(words) - 1] + ' '
-        return completion
+        return True
 
-    def show_help_subtree(self, cmdobj):
-        # Skip dummy entries in the tree.
+    def get_help_subtree(self, cmdobj):
+        lines = []
+        # Only show real entries in the tree.
         if hasattr(cmdobj, 'run'):
-            cmdstring = ' '.join([str(s) for s in cmdobj.command])
-            cli_out("%-20s %s" % (cmdstring, cmdobj.__doc__))
+            lines.append(self.helpline(cmdobj))
         for key in cmdobj.branch:
-            self.show_help_subtree(cmdobj.branch[key])
+            lines.extend(self.get_help_subtree(cmdobj.branch[key]))
+        return lines
 
     def show_help(self, words):
-        matches = self.find_partial_command(self.commands, words, [])
-        if len(matches) == 0:
-            cli_err("No help available: unknown command.")
-        elif len(matches) > 1:
-            cli_err("Ambiguous command.")
+        if not words:
+            items = []
+            for key in self.cmdtree.branch:
+                items.extend(self.get_help_subtree(self.cmdtree.branch[key]))
+            cli_help(items)
         else:
-            cli_out(matches[0].__doc__)
+            matches = self.find_partial_command(self.cmdtree, words, [])
+            if len(matches) == 0:
+                cli_err(CLI_ERR_NOHELP_UNK)
+            elif len(matches) > 1:
+                cli_err(CLI_ERR_AMBIGUOUS)
+            else:
+                cli_out(matches[0].__doc__)
 
 
 # parent class for a command.
