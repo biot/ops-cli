@@ -18,6 +18,11 @@ from opscli.cli import Command
 import opscli.ovsdb as ovsdb
 
 
+class Show(Command):
+    '''Show running system information'''
+    command = ('show',)
+
+
 class Show_system(Command):
     '''System information'''
     command = ('show', 'system')
@@ -36,4 +41,4 @@ class Show_system_fan(Command):
         out_kv('system-fan', data)
 
 
-commands = (Show_system, Show_system_fan)
+commands = (Show, Show_system, Show_system_fan)
