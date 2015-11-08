@@ -208,7 +208,7 @@ class Opscli(HistoricalReader):
             raise Exception("invalid command set")
         for obj in module.commands:
             if (not hasattr(obj, 'command') or
-                    not isinstance(obj.command, tuple)):
+                    not isinstance(obj.command, str)):
                 raise Exception("invalid definition for '%s'" % obj.__name__)
 
     def load_module(self, filename):
@@ -235,7 +235,7 @@ class Opscli(HistoricalReader):
     def insert_command(self, cmdclass):
         prev = None
         cur = self.cmdtree
-        for word in cmdclass.command:
+        for word in cmdclass.command.split():
             branch = self.find_branch(cur, word)
             prev = cur
             if branch is not None:
@@ -436,6 +436,8 @@ class Command:
 
     def __init__(self):
         self.branch = OrderedDict()
+        if hasattr(self, 'command'):
+            self.command = tuple(self.command.split())
         for attr in ('options', 'flags', 'context'):
             if not hasattr(self, attr):
                 setattr(self, attr, tuple())
@@ -448,5 +450,5 @@ class Command:
         if not hasattr(cmdobj, 'command'):
             # Add word as default command. Not really needed for tree
             # traversal, but completion uses it.
-            cmdobj.command = (word, )
+            cmdobj.command = (word,)
         return cmdobj

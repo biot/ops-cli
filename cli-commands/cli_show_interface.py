@@ -21,7 +21,7 @@ from ops.interface import get_interface, get_interface_list
 
 class Show_interface(Command):
     '''Interface information'''
-    command = ('show', 'interface')
+    command = 'show interface'
     options = (TInterface, 'mgmt', 'brief', 'transceiver')
 
     def run(self, opts, flags):

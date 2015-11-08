@@ -20,12 +20,12 @@ import opscli.ovsdb as ovsdb
 
 class Show(Command):
     '''Show running system information'''
-    command = ('show',)
+    command = 'show'
 
 
 class Show_system(Command):
     '''System information'''
-    command = ('show', 'system')
+    command = 'show system'
 
     def run(self, opts, flags):
         data = ovsdb.get_map('Subsystem', 'other_info')
@@ -34,7 +34,7 @@ class Show_system(Command):
 
 class Show_system_fan(Command):
     '''Fan information'''
-    command = ('show', 'system', 'fan')
+    command = 'show system fan'
 
     def run(self, opts, flags):
         data = ovsdb.get_map('Subsystem', 'other_config')

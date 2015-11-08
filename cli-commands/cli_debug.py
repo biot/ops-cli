@@ -21,7 +21,7 @@ from opscli.debug import debug_enable, debug_disable
 
 class Debug(Command):
     '''Enable debug output for subsystems'''
-    command = ('debug',)
+    command = 'debug'
     options = tuple(debug_available())
     flags = ('no', )
 
@@ -41,7 +41,7 @@ class Debug(Command):
 
 class Show_debug(Command):
     '''Show current debug setting'''
-    command = ('show', 'debug')
+    command = 'show debug'
 
     def run(self, opts, flags):
         for key in debug_enabled():
