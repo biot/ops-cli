@@ -68,7 +68,60 @@ class Opscli(Reader):
                 self.load_module(filename)
         if debug_is_on('cli'):
             self.dump_tree(self.cmdtree)
+        self.init_qhelp()
         self.init_completion()
+
+    def init_qhelp(self):
+        class rdr_qhelp(pyrepl.commands.Command):
+            # Make Opscli instance available at Reader key callback time.
+            cli = self
+            def do(self):
+                line = ''.join(self.reader.buffer)
+                cli_wrt('\r\n')
+                try:
+                    items = self.cli.qhelp(line)
+                    cli_help(items, end='\r\n')
+                except Exception as e:
+                    cli_wrt(str(e) + '\r\n')
+                cli_wrt(self.cli.prompt)
+                cli_wrt(line)
+        self.bind(r'?', 'qhelp')
+        self.commands['qhelp'] = rdr_qhelp
+
+    def qhelp(self, line):
+        '''Called when ? is pressed. line is the text up to that point.
+        Returns help items to be shown, as a list of (command, helptext).'''
+        items = []
+        words = line.split()
+        if words:
+            matches = self.find_partial_command(self.cmdtree, words, [])
+            if not matches:
+                raise Exception(CLI_ERR_NOMATCH)
+            if line[-1].isspace():
+                # Last character is a space, to treat any match as a
+                # definite target.
+                if len(matches) == 1:
+                    # Unambiguous match: show possible arguments with
+                    # matching command stripped.
+                    cmdobj = matches[0]
+                    for key in cmdobj.branch:
+                        items.append(self.helpline(cmdobj.branch[key], words))
+                    if not items:
+                        # Command is complete.
+                        if hasattr(cmdobj, 'run'):
+                            items.append(('<cr>', ''))
+                else:
+                    # More than one match on a definite target.
+                    raise Exception(CLI_ERR_AMBIGUOUS)
+            else:
+                # Possibly incomplete match, not ending in space.
+                for cmdobj in matches:
+                    items.append(self.helpline(cmdobj))
+        else:
+            for key in self.cmdtree.branch:
+                items.extend(self.get_help_subtree(self.cmdtree.branch[key]))
+
+        return items
 
     def init_completion(self):
         class rdr_complete(pyrepl.commands.Command):
