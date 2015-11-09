@@ -244,7 +244,9 @@ class Opscli(HistoricalReader):
         if hasattr(cur, 'run'):
                 raise Exception("duplicate command %s")
         # Replace dummy object with the new instantiated command.
-        prev.add_child(word, cmdclass())
+        new_cmd = prev.add_child(word, cmdclass())
+        # Provide the Command instance with this CLI instance.
+        new_cmd.cli = self
 
     # DEBUG
     def dump_tree(self, cmdobj, level=0):
@@ -449,6 +451,7 @@ class Command:
     '''No help provided.'''
 
     def __init__(self):
+        self.cli = None
         self.branch = OrderedDict()
         if hasattr(self, 'command'):
             self.command = tuple(self.command.split())
