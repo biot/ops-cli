@@ -27,8 +27,6 @@ from opscli.tokens import Token, TKeyword
 import opscli.ovsdb as ovsdb
 from opscli.debug import logline, debug_is_on
 
-PROMPT_READ = '> '
-PROMPT_WRITE = '# '
 HISTORY_FILE = '~/.opscli_history'
 # Number of lines to remember across sessions.
 HISTORY_SIZE = 1000
@@ -48,16 +46,16 @@ class Opscli(HistoricalReader):
         # Initialize the OVSDB helper.
         ovsdb.Ovsdb(server=ovsdb_server)
         self.motd = CLI_MSG_MOTD
-        self.base_prompt = 'Openswitch'
+        self.prompt_base = 'Openswitch'
         try:
+            # TODO shell hangs before prompt if this is down
             results = ovsdb.get_map('System', column='mgmt_intf_status')
             if 'hostname' in results:
-                self.base_prompt = results['hostname']
+                self.prompt_base = results['hostname']
         except Exception as e:
             cli_err("Unable to connect to %s: %s." % (ovsdb_server, str(e)))
             raise Exception
-        self.prompt_mode = PROMPT_READ
-        self.prompt = self.base_prompt + self.prompt_mode
+        self.context = []
         # Top of the command tree.
         self.cmdtree = Command()
         self.cmdtree.command = ('root', )
@@ -88,7 +86,7 @@ class Opscli(HistoricalReader):
                     cli_help(items, end='\r\n')
                 except Exception as e:
                     cli_wrt(str(e) + '\r\n')
-                cli_wrt(self.cli.prompt)
+                cli_wrt(self.cli.make_prompt())
                 cli_wrt(line)
         self.bind(r'?', 'qhelp')
         self.commands['qhelp'] = rdr_qhelp
@@ -191,7 +189,7 @@ class Opscli(HistoricalReader):
         cli_wrt('\r\n')
         cli_wrt(text.replace('\n', '\r\n'))
         cli_wrt('\r\n')
-        cli_wrt(self.prompt)
+        cli_wrt(self.make_prompt())
         cli_wrt(''.join(self.buffer))
 
     def helpline(self, cmdobj, prefix=None):
@@ -261,12 +259,28 @@ class Opscli(HistoricalReader):
         cause readline to send a beep.'''
         self.console.beep()
 
+    def context_push(self, ctx):
+        self.context.append(ctx)
+
+    def context_pop(self):
+        self.context.pop()
+
+    def make_prompt(self):
+        if self.context:
+            context = "(%s)" % self.context[-1]
+            prompt_mode = PROMPT_WRITE
+        else:
+            context = ''
+            prompt_mode = PROMPT_READ
+        prompt = self.prompt_base + context + prompt_mode
+        return prompt
+
     def start_shell(self):
         cli_out(self.motd)
         while True:
             try:
                 while True:
-                    self.ps1 = self.base_prompt + self.prompt_mode
+                    self.ps1 = self.make_prompt()
                     line = self.readline()
                     if not self.process_line(line):
                         # Received quit, ctrl-d etc.
