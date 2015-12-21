@@ -29,8 +29,9 @@ def main(args):
     try:
         cli = Opscli(ovsdb_server, command_module_paths=COMMAND_MODULE_PATHS)
         cli.start_shell()
-    except:
-        pass
+    except Exception as e:
+        # TODO log exception to debug log
+        raise
 
 if __name__ == '__main__':
     main(sys.argv[1:])

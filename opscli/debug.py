@@ -22,7 +22,7 @@ _dbg_enabled = {}
 
 
 def debug_available():
-    return sorted(_debug_keys)
+    return tuple(sorted(_debug_keys))
 
 
 def debug_enabled():

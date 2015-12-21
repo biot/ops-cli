@@ -22,10 +22,13 @@ PROMPT_WRITE = '# '
 
 CLI_ERR_NOCOMMAND = '% No such command.'
 CLI_ERR_INCOMPLETE = '% Incomplete command.'
-CLI_ERR_BADOPTION = '% Invalid option'
+CLI_ERR_BADOPTION_ARG = '%% Invalid option %s.'
+CLI_ERR_BADOPTION = '% Invalid option.'
+CLI_ERR_OPT_REQD = '% Required option missing.'
 CLI_ERR_NOMATCH = '% There is no matched command.'
 CLI_ERR_AMBIGUOUS = '% Ambiguous command.'
 CLI_ERR_NOHELP_UNK = '% No help available: unknown command.'
+CLI_ERR_SUPERFLUOUS = '% Superfluous option.'
 
 _keymaps = {
     'system': OD([
@@ -107,8 +110,8 @@ def out_kv(keymap_name, data):
 
 # TODO adjust width of left column to longest command
 def cli_help(items, end='\n'):
-    for command, help_text in items:
-        cli_wrt("  %-20s %s%s" % (command, help_text, end))
+    for item in items:
+        cli_wrt("  %-20s %s%s" % (item, getattr(item, 'help_text', ''), end))
 
 
 # TODO pretty columns

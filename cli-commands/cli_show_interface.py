@@ -13,16 +13,28 @@
 #  License for the specific language governing permissions and limitations
 #  under the License.
 
-from opscli.output import out_kv, cli_out, cli_warn, cli_err
 from opscli.cli import Command
+from opscli.flags import *
 from opscli.tokens import TKeyword, TInterface
+from opscli.options import Opt_one
+from opscli.output import out_kv, cli_out, cli_warn, cli_err
 from ops.interface import get_interface, get_interface_list
 
 
 class Show_interface(Command):
     '''Interface information'''
     command = 'show interface'
-    options = (TInterface, 'mgmt', 'brief', 'transceiver')
+    flags = (F_NO_OPTS_OK,)
+    options = (
+        Opt_one(
+            TInterface(),
+            ('mgmt', 'Management interface details'),
+        ),
+        Opt_one(
+            ('brief', 'Show brief info of interfaces'),
+            ('transceiver', 'Show transceiver info for interfaces'),
+        ),
+    )
 
     def run(self, opts, flags):
         keymap = 'interface'

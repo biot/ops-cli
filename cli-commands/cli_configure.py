@@ -14,39 +14,37 @@
 #  under the License.
 
 from opscli.cli import Command
-from opscli.flags import *
-from opscli.options import Opt_any
-from opscli.output import cli_out
-from opscli.debug import debug_available, debug_enabled
-from opscli.debug import debug_enable, debug_disable
+from opscli.options import Opt_one
+from opscli.output import *
 
 
-class Debug(Command):
-    '''Enable debug output for subsystems'''
-    command = 'debug'
+class Configure(Command):
+    '''Configuration from CLI'''
+    command = 'configure'
     options = (
-        Opt_any(*debug_available()),
+        Opt_one(
+            ('terminal', 'Configure from terminal'),
+            required=True,
+        ),
     )
-    flags = (F_NO, )
+    # Only from top level context.
+    context = [None]
 
     def run(self, opts, flags):
         if not opts:
             raise Exception(CLI_ERR_INCOMPLETE)
-        full_list = debug_available()
-        for key in opts:
-            if F_NO in flags:
-                debug_disable(str(key))
-            else:
-                debug_enable(str(key))
+        self.cli.context_push('config')
 
 
-class Show_debug(Command):
-    '''Show current debug setting'''
-    command = 'show debug'
+class Exit(Command):
+    '''Exit current mode and down to previous mode'''
+    command = 'exit'
 
     def run(self, opts, flags):
-        for key in debug_enabled():
-            cli_out(key)
+        if self.cli.context:
+            self.cli.context_pop()
+        else:
+            return False
 
 
-commands = (Debug, Show_debug)
+commands = (Configure, Exit)

@@ -22,8 +22,12 @@ from pyrepl.unix_console import UnixConsole
 from pyrepl.historical_reader import HistoricalReader
 import pyrepl.commands
 
+from opscli.stringhelp import Str_help
+from opscli.flags import *
 from opscli.output import *
 from opscli.tokens import Token, TKeyword
+from opscli.options import Option, complete_options, help_options
+from opscli.options import tokenize_options, check_required_options
 import opscli.ovsdb as ovsdb
 from opscli.debug import logline, debug_is_on
 
@@ -43,6 +47,7 @@ class Opscli(HistoricalReader):
     '''
     def __init__(self, ovsdb_server, command_module_paths=None):
         super(Opscli, self).__init__(UnixConsole())
+        self.fix_syntax_table()
         # Initialize the OVSDB helper.
         ovsdb.Ovsdb(server=ovsdb_server)
         self.motd = CLI_MSG_MOTD
@@ -70,9 +75,23 @@ class Opscli(HistoricalReader):
                 self.load_module(filename)
         if debug_is_on('cli'):
             self.dump_tree(self.cmdtree)
+        self.init_ctrl_c()
         self.init_qhelp()
         self.init_completion()
         self.init_history()
+
+    def fix_syntax_table(self):
+        '''The default pyrepl syntax table only considers a-z as word
+        boundaries, which affects keyboard navigation. Add a few more.'''
+        extra = '0123456789_-'
+        for c in extra:
+            self.syntax_table[unichr(ord(c))] = 1
+
+    def init_ctrl_c(self):
+        class ctrl_c(pyrepl.commands.Command):
+            def do(self):
+                raise KeyboardInterrupt
+        self.commands['interrupt'] = ctrl_c
 
     def init_qhelp(self):
         class rdr_qhelp(pyrepl.commands.Command):
@@ -86,6 +105,7 @@ class Opscli(HistoricalReader):
                     cli_help(items, end='\r\n')
                 except Exception as e:
                     cli_wrt(str(e) + '\r\n')
+                    raise
                 cli_wrt(self.cli.make_prompt())
                 cli_wrt(line)
         self.bind(r'?', 'qhelp')
@@ -101,26 +121,31 @@ class Opscli(HistoricalReader):
             if not matches:
                 raise Exception(CLI_ERR_NOMATCH)
             if line[-1].isspace():
-                # Last character is a space, to treat any match as a
-                # definite target.
-                if len(matches) == 1:
-                    # Unambiguous match: show possible arguments with
-                    # matching command stripped.
-                    cmdobj = matches[0]
-                    for key in cmdobj.branch:
-                        items.append(self.helpline(cmdobj.branch[key], words))
-                    if not items:
-                        # Command is complete.
-                        if hasattr(cmdobj, 'run'):
-                            items.append(('<cr>', ''))
-                else:
-                    # More than one match on a definite target.
+                # Last character is a space, so whatever comes before has
+                # to match a command unambiguously if we are to continue.
+                if len(matches) != 1:
                     raise Exception(CLI_ERR_AMBIGUOUS)
+
+                cmdobj = matches[0]
+                for key in cmdobj.branch:
+                    items.append(self.helpline(cmdobj.branch[key], words))
+                # Or maybe the command is complete, and has some options
+                # that can come next.
+                items.extend(help_options(cmdobj.options, words))
+                if F_NO_OPTS_OK in cmdobj.flags:
+                    # Command is complete by itself, too.
+                    items.insert(0, Str_help(('<cr>', cmdobj.__doc__)))
             else:
                 # Possibly incomplete match, not ending in space.
                 for cmdobj in matches:
-                    items.append(self.helpline(cmdobj))
+                    if len(words) <= len(cmdobj.command):
+                        # It's part of the command
+                        items.append(self.helpline(cmdobj, words[:-1]))
+                    else:
+                        # Must be an option.
+                        items.extend(complete_options(cmdobj.options, words))
         else:
+            # On empty line: show all top-level commands.
             for key in self.cmdtree.branch:
                 items.extend(self.get_help_subtree(self.cmdtree.branch[key]))
 
@@ -136,6 +161,8 @@ class Opscli(HistoricalReader):
                     self.cli.complete(line)
                 except Exception as e:
                     cli_wrt(str(e) + '\r\n')
+                    if DEBUG_TRACEBACK:
+                        raise
         self.bind(r'\t', 'complete')
         self.commands['complete'] = rdr_complete
 
@@ -146,24 +173,53 @@ class Opscli(HistoricalReader):
         matches = self.find_partial_command(self.cmdtree, words, [])
         if not matches:
             return
+
         items = []
         if line[-1].isspace():
+            # Showing next possible words or arguments.
             if len(matches) != 1:
                 # The line doesn't add up to an unambiguous command.
                 return
-            # We have matching words, and only need to list arguments.
-            items = matches[0].branch.keys()
-            if not items:
-                # No more command branches off of this one. Maybe it
+
+            if self.last_event != 'complete':
+                # Only show next words/arguments on second tab.
+                return
+
+            cmdobj = matches[0]
+            # Strip matched command words.
+            words = words[len(cmdobj.command):]
+
+            if cmdobj.branch.keys():
+                # We have some matching words, need to list the rest.
+                items = cmdobj.branch.keys()
+            else:
+                # No more commands branch off of this one. Maybe it
                 # has some options?
-                items = matches[0].options
+                items = help_options(cmdobj.options, words)
         else:
             # Completing a word.
             if len(matches) == 1:
                 # Found exactly one completion.
-                cmpl_word = matches[0].command[len(words) -1]
-                cmpl = cmpl_word[len(words[-1]):]
-                self.insert(cmpl + ' ')
+                if len(words) <= len(matches[0].command):
+                    # It's part of the command
+                    cmpl_word = matches[0].command[len(words) - 1]
+                else:
+                    # Must be an option.
+                    cmpl_word = None
+                    cmpls = complete_options(matches[0].options, words)
+                    if len(cmpls) == 1:
+                        # Just one option matched.
+                        cmpl_word = cmpls[0]
+                    elif len(cmpls) > 1:
+                        # More than one match. Ignore the first completion
+                        # attempt, and list all possible completions on every
+                        # tab afterwards.
+                        if self.last_event == 'complete':
+                            for cmdobj in matches:
+                                items.append(' '.join(cmpls))
+                if cmpl_word:
+                    cmpl = cmpl_word[len(words[-1]):]
+                    self.insert(cmpl + ' ')
             else:
                 # More than one match. Ignore the first completion attempt,
                 # and list all possible completions on every tab afterwards.
@@ -171,7 +227,7 @@ class Opscli(HistoricalReader):
                     for cmdobj in matches:
                         items.append(' '.join(cmdobj.command))
         if items:
-            self.inline(fmt_cols(items))
+            self.print_inline(fmt_cols(items))
 
     def after_command(self, cmd):
         # This has the callback names e.g. 'qhelp', 'complete' etc.
@@ -183,8 +239,8 @@ class Opscli(HistoricalReader):
         if os.path.exists(histfile):
             self.history = open(histfile).read().split('\n')[:-1]
 
-    def inline(self, text):
-        '''Write text on the next line and reproduce the prompt and entered
+    def print_inline(self, text):
+        '''Write text on the next line, and reproduce the prompt and entered
         text without submitting it.'''
         cli_wrt('\r\n')
         cli_wrt(text.replace('\n', '\r\n'))
@@ -197,7 +253,7 @@ class Opscli(HistoricalReader):
             words = cmdobj.command[len(prefix):]
         else:
             words = cmdobj.command
-        return (' '.join(words), cmdobj.__doc__)
+        return Str_help((' '.join(words), cmdobj.__doc__))
 
     def check_module(self, module):
         if not hasattr(module, 'commands'):
@@ -208,6 +264,20 @@ class Opscli(HistoricalReader):
             if (not hasattr(obj, 'command') or
                     not isinstance(obj.command, str)):
                 raise Exception("invalid definition for '%s'" % obj.__name__)
+            if not hasattr(obj, 'options'):
+                continue
+            if not isinstance(getattr(obj, 'options'), tuple):
+                raise Exception("options must be a tuple.")
+            for opt in obj.options:
+                if not issubclass(opt.__class__, Option):
+                    raise Exception("invalid option %s" % str(opt))
+                for arg in opt.args:
+                    if isinstance(arg, str):
+                        continue
+                    if issubclass(arg.__class__, Token):
+                        continue
+                    raise Exception("invalid token for option %s: %s" % (
+                        str(opt), str(arg)))
 
     def load_module(self, filename):
         modname = filename[:-3]
@@ -240,7 +310,7 @@ class Opscli(HistoricalReader):
                 cur = branch
             else:
                 # Instantiate dummy command object here.
-                cur = cur.add_child(word, Command())
+                cur = cur.add_child(word, Command(is_dummy=True))
         if hasattr(cur, 'run'):
                 raise Exception("duplicate command %s")
         # Replace dummy object with the new instantiated command.
@@ -248,10 +318,9 @@ class Opscli(HistoricalReader):
         # Provide the Command instance with this CLI instance.
         new_cmd.cli = self
 
-    # DEBUG
     def dump_tree(self, cmdobj, level=0):
-        dbg("%s%s %s %s" % ('    ' * level, ' '.join(cmdobj.command),
-                            cmdobj.options, cmdobj.flags))
+        dbg("%s%s %s %s {%s...}" % ('    ' * level, ' '.join(cmdobj.command),
+            cmdobj.options, cmdobj.flags, cmdobj.__doc__[:10]))
         for cmd in cmdobj.branch:
             self.dump_tree(cmdobj.branch[cmd], level + 1)
 
@@ -266,6 +335,9 @@ class Opscli(HistoricalReader):
 
     def context_pop(self):
         self.context.pop()
+
+    def context_list(self):
+        return self.context
 
     def make_prompt(self):
         if self.context:
@@ -294,6 +366,7 @@ class Opscli(HistoricalReader):
             except KeyboardInterrupt:
                 # ctrl-c throws away the current line and prompts again.
                 cli_out('^C')
+            # TODO catch all exceptions, log traceback, print error msg
         # Save this session's history.
         histfile = os.path.expanduser(HISTORY_FILE)
         f = open(histfile, 'w')
@@ -317,67 +390,45 @@ class Opscli(HistoricalReader):
                     cli_err(str(e))
         return True
 
-    # Traverse tree starting at cmdobj to find a command consisting of words.
-    # returns Command object, or None if not found.
-    # TODO Currently unused.
-    def find_command(self, cmdobj, words):
-        if words[0] in cmdobj.branch:
-            if len(words) == 1:
-                # Found a complete match on all words.
-                return cmdobj.branch[words[0]]
-            else:
-                # Continue matching on this branch with the next word.
-                return self.find_command(cmdobj.branch[words[0]], words[1:])
-        else:
-            # Didn't find the word. Stop searching and return what we have.
-            return cmdobj
-
     # Traverse tree starting at cmdobj to find a command for which all words
     # are at least a partial match. Returns list of Command objects that match.
     def find_partial_command(self, cmdobj, words, matches):
         if len(cmdobj.branch) == 0:
             # This branch is a complete match for all words.
-            matches.append(cmdobj)
+            if self.check_context(cmdobj):
+                # This command is allowed in the current context.
+                matches.append(cmdobj)
+            # In any case we're done with this branch.
             return matches
         for key in cmdobj.branch:
             if key.startswith(words[0]):
                 # word is a partial match for this command.
                 if len(words) == 1:
                     # Found a match on all words.
-                    matches.append(cmdobj.branch[key])
+                    last = cmdobj.branch[key]
+                    if self.check_context(last):
+                        matches.append(last)
                 else:
                     # Continue matching on this branch with the next word.
                     return self.find_partial_command(cmdobj.branch[key],
                                                      words[1:], matches)
         return matches
 
-    # Tokenize words to Token-derived types according to the given options
-    # tuple, raising an exception for non-matching words.
-    def convert_options(self, options, words):
-        # Make a mutable copy for local use.
-        options = list(options)
-        opts = [None] * len(words)
-        for w in range(len(words)):
-            if words[w] in options:
-                # Found a keyword.
-                opts[w] = TKeyword(words[w])
-            else:
-                # Must be a non-keyword option.
-                for option_type in options:
-                    if isinstance(option_type, str):
-                        continue
-                    if not issubclass(option_type, Token):
-                        # Bug in command module options list.
-                        raise Exception("invalid command module option %s"
-                                        % str(option_type))
-                    # Instantiate a token for this option. This will bomb out
-                    # with an exception if the token type's verify() fails.
-                    opts[w] = option_type(words[w])
-        if None in opts:
-            # Something didn't get tokenized.
-            raise Exception(CLI_ERR_BADOPTION + "%s." % words[opts.index(None)])
+    # TODO
+    def check_context(self, cmdobj):
+        return True
+        #cli_wrt("{%s}{%s-%s} " % (self.context, ' '.join(cmdobj.command),
+        #    cmdobj.context))
+        '''Check command context specification against the running context.'''
+        if not cmdobj.context:
+            # An empty context means it can be run anywhere.
+            return True
 
-        return opts
+        if len(cmdobj.context) == 1 and cmdobj.context[0] is None:
+            # Command specifically must not be called from anything
+            # but the top level.
+            return len(self.context) == 0
+
 
     def run_command(self, words):
         if words[0] == 'help':
@@ -399,12 +450,14 @@ class Opscli(HistoricalReader):
             # Dummy command node, such as 'show'.
             raise Exception(CLI_ERR_INCOMPLETE)
 
-        opts = []
+        tokens = []
         if len(cmdobj.command) != len(words):
             # Some of the words aren't part of the command. The rest must
             # be options.
             opt_words = words[len(cmdobj.command):]
-            opts = self.convert_options(cmdobj.options, opt_words)
+            tokens = tokenize_options(opt_words, cmdobj.options)
+
+        check_required_options(tokens, cmdobj.options)
 
         for flag in flags:
             if flag not in cmdobj.flags:
@@ -412,14 +465,16 @@ class Opscli(HistoricalReader):
                 raise Exception(CLI_ERR_NOCOMMAND)
         try:
             # Run command.
-            cmdobj.run(opts, flags)
+            ret = cmdobj.run(tokens, flags)
         except Exception as e:
             if DEBUG_TRACEBACK:
                 raise
             else:
                 cli_err(str(e))
+                return True
 
-        return True
+        # Most commands just return None, which is fine.
+        return ret is not False
 
     def get_help_subtree(self, cmdobj):
         lines = []
@@ -450,9 +505,10 @@ class Opscli(HistoricalReader):
 class Command:
     '''No help provided.'''
 
-    def __init__(self):
+    def __init__(self, is_dummy=False):
         self.cli = None
         self.branch = OrderedDict()
+        self.is_dummy = is_dummy
         if hasattr(self, 'command'):
             self.command = tuple(self.command.split())
         for attr in ('options', 'flags', 'context'):
@@ -460,10 +516,22 @@ class Command:
                 setattr(self, attr, tuple())
 
     def __repr__(self):
-        return "<%s'>" % (self.__class__.__name__)
+        name = "%s" % (self.__class__.__name__)
+        if self.is_dummy:
+            name += '(dummy)'
+        return "<%s>" % name
 
     def add_child(self, word, cmdobj):
-        self.branch[word] = cmdobj
+        if word in self.branch and self.branch[word].branch:
+            # Child already exists, and has a branch going off of it.
+            # It might still be a dummy, but that branch has to be kept.
+            if cmdobj.branch:
+                # Shouldn't happen.
+                raise exception("dupe!")
+            cmdobj.branch = self.branch[word].branch
+        # Don't overwrite an existing branch, unless it was a dummy.
+        if word not in self.branch or self.branch[word].is_dummy:
+            self.branch[word] = cmdobj
         if not hasattr(cmdobj, 'command'):
             # Add word as default command. Not really needed for tree
             # traversal, but completion uses it.
