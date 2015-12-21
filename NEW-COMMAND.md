@@ -36,7 +36,7 @@ to be entered into the CLI's syntax tree.
 
 Here's a bare-bones command module:
 
-```
+```python
 from opscli.cli import Command
 from opscli.output import *
 
@@ -75,7 +75,7 @@ you declare just one command.
 
 Let's add some options to the command:
 
-```
+```python
 from opscli.cli import Command
 from opscli.output import *
 
@@ -108,7 +108,7 @@ switch> show ver
 But there's no help text, just the options. Let's fix that by adding
 some help text:
 
-```
+```python
 command = 'show version'
 options = (
     Opt_one(
@@ -147,7 +147,7 @@ The code above is still a little sloppy: if you invoke it without specifying
 the `hardware` or `software` options, it just doesn't output anything. Let's
 make it so at least one of them always has to be given:
 
-```
+```python
 command = 'show version'
 options = (
     Opt_one(
@@ -181,7 +181,7 @@ they are TKeyword objects.
 
 Here's an example of an option that uses a TInteger object:
 
-```
+```python
 from opscli.tokens import TInteger
 
 class Set_protocol_version(Command):
@@ -218,7 +218,7 @@ switch> set proto
 When using tokens that don't take strings, you can always specify help
 text like this:
 
-```
+```python
 options = (
     Opt_one(
         TInteger(min_int=1, max_int=5, help_text='Version to set'),
@@ -240,14 +240,14 @@ we're adding, so `set protocol` created a branch in the command tree for
 no help text:
 
 ```
-switch> set
+switch> set ?
   set                  No help provided.
 switch> set
 ```
 
 Let's add a little dummy command, just so we can get some help text in there:
 
-```
+```python
 class Set(Command):
     '''Set various things'''
     command = 'set'
@@ -256,7 +256,7 @@ class Set(Command):
 We don't even need a `run()` method here:
 
 ```
-switch> set
+switch> set ?
   set                  Set various things
 switch> set
 ```
@@ -266,7 +266,7 @@ Don't forget to add dummy commands to your `commands` variable in the module!
 Let's take a look at one more token type: strings. These are a set of strings
 the user can specify:
 
-```
+```python
 class Logrotate(Command):
     '''Configure log rotation policy'''
     command = 'logrotate'
@@ -299,7 +299,7 @@ we can just make them tuples in the form
 
 The result looks like this:
 
-```
+```python
 class Logrotate(Command):
     '''Configure log rotation policy'''
     command = 'logrotate'
