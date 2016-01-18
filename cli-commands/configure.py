@@ -19,7 +19,7 @@ from opscli.options import Opt_one
 from opscli.flags import *
 from opscli.output import *
 
-from cli_vlan import Conf_vlan
+from vlan import Conf_vlan
 
 
 class Configure(Command):

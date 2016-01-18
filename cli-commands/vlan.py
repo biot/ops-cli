@@ -19,7 +19,7 @@ from opscli.tokens import TInteger
 from opscli.options import Opt_one
 from opscli.context import *
 from opscli.output import *
-from cli_exit import Exit
+from exit import Exit
 import opscli.ovsdb as ovsdb
 
 

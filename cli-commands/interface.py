@@ -17,7 +17,7 @@ from opscli.command import *
 from opscli.options import *
 from opscli.flags import *
 from opscli.context import *
-from cli_exit import Exit
+from exit import Exit
 
 
 class Shutdown(Command):

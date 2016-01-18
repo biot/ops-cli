@@ -71,7 +71,7 @@ class Opscli(HistoricalReader):
                 continue
             sys.path.insert(0, path)
             for filename in os.listdir(path):
-                if filename[:4] != 'cli_' or filename[-3:] != '.py':
+                if filename[-3:] != '.py':
                     continue
                 # Strip '.py'.
                 __import__(filename[:-3])
