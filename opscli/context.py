@@ -13,13 +13,38 @@
 #  License for the specific language governing permissions and limitations
 #  under the License.
 
-(
-    # Indicates the command may be prefixed by 'no', with all options
-    # unchanged.
-    F_NO,
+from opscli.cli import get_cmdtree
 
-    # When specified, the command is valid without any options. The default
-    # means at least one option must be given.
-    F_NO_OPTS_OK
 
-) = range(2)
+_contexts = []
+
+
+def context_push(name, obj=None):
+    _contexts.append(Context(name, obj))
+
+
+def context_pop():
+    if not _contexts:
+        return False
+    else:
+        _contexts.pop()
+        return True
+
+
+def context_get():
+    return _contexts[-1]
+
+
+def context_names():
+    names = []
+    for ctx in _contexts:
+        names.append(ctx.name)
+
+    return names
+
+
+class Context:
+    def __init__(self, name, obj=None):
+        self.name = name
+        self.cmdtree = get_cmdtree(name)
+        self.obj = obj

@@ -19,6 +19,7 @@ import select
 
 import opscli.debug
 
+
 DEFAULT_DB = 'OpenSwitch'
 OVSDB_TIMEOUT_MS = 1000
 
@@ -105,6 +106,32 @@ class Ovsdb:
             select["columns"] = columns
         return select
 
+    def _insert(self, table, row):
+        insert = {
+            "op": "insert",
+            "table": table,
+            "row": row,
+        }
+        return insert
+
+    def _update(self, table, row, conditions=[]):
+        update = {
+            "op": "insert",
+            "table": table,
+            "where": conditions,
+            "row": row,
+        }
+        return update
+
+    def _mutate(self, table, mutations, conditions=[]):
+        mutate = {
+            "op": "mutate",
+            "table": table,
+            "where": conditions,
+            "mutations": mutations,
+        }
+        return mutate
+
     def _transact(self, database, seq, operations):
         transact = {
             "method": "transact",
@@ -112,6 +139,20 @@ class Ovsdb:
             "id": seq
         }
         return transact
+
+    def transact(self, transaction, database=DEFAULT_DB):
+        self.seq += 1
+        tmp = self._transact(database, self.seq, transaction)
+        self.send(tmp)
+        while True:
+            response = self.receive()
+            if response.get('id') == self.seq:
+                break
+        if response['error'] is not None:
+            raise Exception(response['error'])
+        elif 'error' in response['result'][0]:
+            raise Exception(response['result'][0])
+        return response['result'][0]
 
     def query(self, table, columns=None, conditions=[], database=DEFAULT_DB):
         self.seq += 1
@@ -134,12 +175,66 @@ def get(table, columns=None, conditions=[], database=DEFAULT_DB):
     response = _ovsdb.query(table=table, columns=columns,
                             conditions=conditions, database=database)
     _ovsdb.close()
+
     return response
 
 
-def get_map(table, column):
-    data = {}
-    for key, value in get(table, [column])[0][column][1]:
-        data[key] = value
+def get_map(table, column, conditions=[]):
+    data = get(table, [column], conditions=conditions)[0][column][1]
+    results = {}
+    for key, value in data:
+        results[key] = value
 
-    return data
+    return results
+
+
+def insert(table, row, database=DEFAULT_DB):
+    _ovsdb.connect()
+    tr = _ovsdb._insert(table, row)
+    response = _ovsdb.transact(tr, database=database)
+    _ovsdb.close()
+
+    return response
+
+
+def update(table, row, conditions=[], database=DEFAULT_DB):
+    _ovsdb.connect()
+    tr = _ovsdb._update(table, row, conditions)
+    response = _ovsdb.transact(tr, database=database)
+    _ovsdb.close()
+
+    return response
+
+
+def mutate_map(table, mutations, conditions=[]):
+    _ovsdb.connect()
+    tr = _ovsdb._mutate(table, mutations, conditions)
+    response = _ovsdb.transact(tr, database=DEFAULT_DB)
+    _ovsdb.close()
+
+    return response
+
+
+def map_set_key(table, column, key, value, conditions=[]):
+    _ovsdb.connect()
+    mutations = [
+        [column, 'delete', ['set', [key]]],
+        [column, 'insert', ['map', [[key, value]]]],
+    ]
+    tr = _ovsdb._mutate(table, mutations, conditions)
+    response = _ovsdb.transact(tr, database=DEFAULT_DB)
+    _ovsdb.close()
+
+    return response
+
+
+def map_delete_key(table, column, key, conditions=[]):
+    _ovsdb.connect()
+    mutations = [
+        [column, 'delete', ['set', [key]]],
+    ]
+    tr = _ovsdb._mutate(table, mutations, conditions)
+    response = _ovsdb.transact(tr, database=DEFAULT_DB)
+    _ovsdb.close()
+
+    return response

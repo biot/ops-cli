@@ -13,10 +13,11 @@
 #  License for the specific language governing permissions and limitations
 #  under the License.
 
-from opscli.cli import Command
+from opscli.command import *
 from opscli.output import *
 from opscli.options import Opt_one
 from opscli.tokens import TInteger
+
 
 class Show_version(Command):
     '''Version information'''
@@ -54,4 +55,4 @@ class Set_protocol_version(Command):
         cli_out("Setting protocol version %s" % opts[0])
 
 
-commands = (Show_version, Set, Set_protocol_version)
+register_commands((Show_version, Set, Set_protocol_version))

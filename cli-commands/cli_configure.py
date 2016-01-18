@@ -13,38 +13,29 @@
 #  License for the specific language governing permissions and limitations
 #  under the License.
 
-from opscli.cli import Command
+from opscli.command import *
+from opscli.context import *
 from opscli.options import Opt_one
+from opscli.flags import *
 from opscli.output import *
+
+from cli_vlan import Conf_vlan
 
 
 class Configure(Command):
     '''Configuration from CLI'''
     command = 'configure'
+    flags = (F_NO_OPTS_OK,)
     options = (
         Opt_one(
             ('terminal', 'Configure from terminal'),
-            required=True,
         ),
     )
     # Only from top level context.
     context = [None]
 
     def run(self, opts, flags):
-        if not opts:
-            raise Exception(CLI_ERR_INCOMPLETE)
-        self.cli.context_push('config')
+        context_push('config')
 
 
-class Exit(Command):
-    '''Exit current mode and down to previous mode'''
-    command = 'exit'
-
-    def run(self, opts, flags):
-        if self.cli.context:
-            self.cli.context_pop()
-        else:
-            return False
-
-
-commands = (Configure, Exit)
+register_commands((Configure,))

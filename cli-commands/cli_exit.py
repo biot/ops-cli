@@ -13,13 +13,25 @@
 #  License for the specific language governing permissions and limitations
 #  under the License.
 
-(
-    # Indicates the command may be prefixed by 'no', with all options
-    # unchanged.
-    F_NO,
+from opscli.command import *
+from opscli.context import *
 
-    # When specified, the command is valid without any options. The default
-    # means at least one option must be given.
-    F_NO_OPTS_OK
 
-) = range(2)
+class Quit(Command):
+    '''Quit shell'''
+    command = 'quit'
+
+    def run(self, opts, flags):
+        return False
+
+
+class Exit(Command):
+    '''Exit current mode and down to previous mode'''
+    command = 'exit'
+
+    def run(self, opts, flags):
+        if not context_pop():
+            return False
+
+
+register_commands((Quit,))

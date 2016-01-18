@@ -13,8 +13,7 @@
 #  License for the specific language governing permissions and limitations
 #  under the License.
 
+
 class EOptionMismatch(Exception):
     '''The words passed in violated the option type's constraints.'''
     pass
-
-

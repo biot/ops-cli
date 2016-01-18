@@ -13,9 +13,9 @@
 #  License for the specific language governing permissions and limitations
 #  under the License.
 
-from opscli.cli import Command
+from opscli.command import *
 from opscli.flags import *
-from opscli.options import Opt_any
+from opscli.options import Opt_one
 from opscli.output import cli_out
 from opscli.debug import debug_available, debug_enabled
 from opscli.debug import debug_enable, debug_disable
@@ -25,7 +25,7 @@ class Debug(Command):
     '''Enable debug output for subsystems'''
     command = 'debug'
     options = (
-        Opt_any(*debug_available()),
+        Opt_one(*debug_available()),
     )
     flags = (F_NO, )
 
@@ -49,4 +49,4 @@ class Show_debug(Command):
             cli_out(key)
 
 
-commands = (Debug, Show_debug)
+register_commands((Debug, Show_debug))

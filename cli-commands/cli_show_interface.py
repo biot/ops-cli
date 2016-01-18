@@ -13,7 +13,7 @@
 #  License for the specific language governing permissions and limitations
 #  under the License.
 
-from opscli.cli import Command
+from opscli.command import *
 from opscli.flags import *
 from opscli.tokens import TKeyword, TInterface
 from opscli.options import Opt_one
@@ -71,4 +71,4 @@ class Show_interface(Command):
                 out_kv(keymap, data)
 
 
-commands = (Show_interface, )
+register_commands((Show_interface,))

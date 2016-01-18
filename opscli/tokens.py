@@ -200,3 +200,57 @@ class TInterface(Token):
 
     def syntax(self):
         return [Str_help(('<interface>', self.help_text))]
+
+
+def check_ipv4(ipaddress):
+    try:
+        quad = ipaddress.split('.')
+        if len(quad) != 4:
+            return False
+        for byte in quad:
+            if not byte.isdigit():
+                return False
+            num = int(byte)
+            if num < 0 or num > 255:
+                return False
+        return True
+    except:
+        pass
+
+    return False
+
+
+def check_ipv6(ipaddress):
+    # TODO
+    return True
+
+
+class TIPAddress(Token):
+    description = 'IP address'
+
+    def __init__(self, **kwargs):
+        Token.__init__(self, **kwargs)
+        if not self.help_text:
+            self.help_text = 'IP address'
+
+    def nail(self, word):
+        if check_ipv4(word):
+            self.is_ipv4 = True
+        elif check_ipv6(word):
+            self.is_ipv6 = True
+        else:
+            raise ValueError("invalid IP address")
+        self.value = word
+
+    def enum(self):
+        return []
+
+    def complete(self, word):
+        return []
+
+    def syntax(self):
+        return [Str_help(('<IPv4 address>', self.help_text)),
+                Str_help(('<IPv6 address>', self.help_text))]
+
+    def verify(self, word):
+        return check_ipv4(word) or check_ipv6(word)

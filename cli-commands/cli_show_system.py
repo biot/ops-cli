@@ -13,8 +13,8 @@
 #  License for the specific language governing permissions and limitations
 #  under the License.
 
+from opscli.command import *
 from opscli.output import out_kv
-from opscli.cli import Command
 import opscli.ovsdb as ovsdb
 
 
@@ -41,4 +41,4 @@ class Show_system_fan(Command):
         out_kv('system-fan', data)
 
 
-commands = (Show, Show_system, Show_system_fan)
+register_commands((Show, Show_system, Show_system_fan))

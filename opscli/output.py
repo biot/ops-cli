@@ -72,6 +72,23 @@ _keymaps = {
         ('default_gateway', 'IPv4 default route'),
         ('ipv6_linklocal', 'IPv6 link local address/prefix'),
     ]),
+    'lldp': OD([
+        ('lldp_enable', 'Enabled'),
+        ('lldp_holdtime', 'Hold time'),
+        ('lldp_tx_interval', 'Transmit interval'),
+        ('lldp_mgmt_addr', 'Management address'),
+    ]),
+    'lldp_tlv': OD([
+        ('lldp_tlv_mgmt_addr_enable', 'Management address',),
+        ('lldp_tlv_port_proto_vlan_id_enable', 'Port protocol VLAN ID',),
+        ('lldp_tlv_port_proto_id_enable', 'Port protocol ID',),
+        ('lldp_tlv_port_vlan_name_enable', 'Port VLAN name',),
+        ('lldp_tlv_port_desc_enable', 'Port description',),
+        ('lldp_tlv_port_vlan_id_enable', 'Port VLAN ID',),
+        ('lldp_tlv_sys_cap_enable', 'System capabilities',),
+        ('lldp_tlv_sys_desc_enable', 'System description',),
+        ('lldp_tlv_sys_name_enable', 'System name',),
+    ]),
 }
 
 
@@ -105,7 +122,21 @@ def out_kv(keymap_name, data):
             max_field_len = max(max_field_len, len(keymap[key]))
     for key in keymap:
         if key in data:
-            cli_out("  %-*s: %s" % (max_field_len, keymap[key], data[key]))
+            if isinstance(data[key], bool):
+                if data[key]:
+                    value = 'Yes'
+                else:
+                    value = 'Yes'
+            else:
+                value = str(data[key])
+            cli_out("  %-*s: %s" % (max_field_len, keymap[key], value))
+
+
+def out_keys(keymap_name, data):
+    keymap = _keymaps[keymap_name]
+    for key in keymap:
+        if key in data:
+            cli_out("  %s" % keymap[key])
 
 
 # TODO adjust width of left column to longest command
@@ -121,5 +152,21 @@ def fmt_cols(data):
     return '    '.join(data)
 
 
-def out_cols(data):
-    cli_out(fmt_cols(data))
+def out_table(data, title=None, indent=0):
+    if not data:
+        return
+    if title:
+        len_row = title
+    else:
+        len_row = data[0]
+    maxlen = [0] * len(len_row)
+    for f in range(len(len_row)):
+        if len(len_row[f]) > maxlen[f]:
+            maxlen[f] = len(len_row[f])
+    fmt = ' ' * indent
+    for l in maxlen:
+        fmt += "%%-%ds   " % l
+    if title:
+        cli_out(fmt % tuple(title))
+    for row in data:
+        cli_out(fmt % tuple(row))

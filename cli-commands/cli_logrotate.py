@@ -13,7 +13,7 @@
 #  License for the specific language governing permissions and limitations
 #  under the License.
 
-from opscli.cli import Command
+from opscli.command import *
 from opscli.tokens import TInteger, TString
 from opscli.options import Opt_all_order
 from opscli.output import *
@@ -56,4 +56,4 @@ class Logrotate(Command):
             cli_out("<should write period to OVSDB>")
 
 
-commands = (Logrotate,)
+register_commands((Logrotate,), tree='config')

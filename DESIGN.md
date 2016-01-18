@@ -34,6 +34,26 @@ General design principles
     done, and understand information it gets back.
 
 
+Commands
+========
+A command consists of an object derived from the `Command` class, registered
+at with the CLI into a command tree.
+
+The command object's docstring serves as the help text for that command. The
+object attribute `command` contains a string that describes the base command
+string to be typed, without options.
+
+The `options` and `flags` attributes are optional. The `run()` method is invoked
+when the command is typed, with two arguments:
+
+* `opts` contains a list of tokens corresponding to the options specified by
+    the user, according to the various syntax constrainst expressed in the
+    command's `options` attribute. The `run()` method is guaranteed not to be
+    invoked unless the syntax constraints are satisfied.
+
+* `flags` contains a list of flags appropriate to the invocation.
+
+
 Options
 =======
 A command module can declare optional arguments by adding an `options`
@@ -46,9 +66,8 @@ the Option base class.
 
 The following methods **must** be implemented in Option-derived objects:
 
-* `match(words)`
-
-* `complete(word)` Returns a list of words that start with `word`.
+* `match(words)` Returns a list of nailed tokens which match the respective
+    given words, according to the option type's constraints.
 
 * `next_token(words)` Returns a list of tokens that can be given in this
     option, considering the `words` provided. If no token is appropriate,
@@ -58,6 +77,8 @@ The following methods **must** be implemented in Option-derived objects:
     If the list of tokens returned are the **only** tokens that apply,
     the last item in the list in `None`. In that case, any other options'
     token lists are discarded.
+
+* `complete(word)` Returns a list of words that start with `word`.
 
 
 Option types
@@ -70,6 +91,9 @@ The following Option types are defined:
 * `Opt_any()` Any (or none) of the tokens can be provided, in any order.
     When `required` is set in this option, exactly one of the tokens is
     required.
+
+* `Opt_any_order()` Any (or none) of the tokens can be provided, in the order
+    provided. Matching must start with the first word and token.
 
 * `Opt_all()` If any of the tokens are provided, they must all be provided,
     in any order. When `required` is set in this option, all tokens must
@@ -114,8 +138,8 @@ it, with the arguments provided for that particular instance. When the CLI
 dispatcher decides to match a word entered by the user to that instance, its
 `nail()` method is called.
 
-Help text
----------
+Token help text
+---------------
 All strings used as tokens can be specified either as regular `strings`, or
 as two-element tuples. In this case the first element is the string, and the
 second is help text related to that string.
@@ -186,5 +210,49 @@ In addition to these, all token types take the following optional arguments:
     If True, this token **must** be present in the option. However that does
     not mean the option stanza itself is required (see below).
 
+
+Flags
+=====
+Command flags can be specified in the `flags` attribute`, and can be listed in
+the `flags` argument to the command's `run()` method. The following flags are
+defined:
+
+* `F_NO`
+    When specified in the command flags, this indicates that the command can be
+    prefixed by `no `, such as in `no shutdown`. If the user does use the "no"
+    prefix, the F_NO flag is in the `run()` method's flags argument. The code
+    in that method must then check for this flag to  determine if the user wants
+    to negate the command.
+
+    If the user specifies "no" before a command that doesn't declare this flag,
+    it's a syntax error and the `run()` method will not be invoked.
+
+* `F_NO_OPTS_OK`
+    When specified in the command flags, this indicates the command may be
+    invoked without any options i.e. only the bare command string. Otherwise,
+    a command that declares options need to have at least one specified.
+
+    Note that a command with no declared options doesn't need this flag.
+
+
+Contexts
+========
+A command object must be registered with the command shell by calling the
+`register_commands()` function. This takes a tuple of command objects as its
+first argument, and the name of the context to register the command in as the
+optional second argument. If not specified, the default context is 'root'.
+
+The context is a freeform string, used only when registering a command and
+jumping into a context. The shell starts in the default ('root') context.
+
+To jump into a new context, call `context_push(context, obj)`. The first
+argument is the context. The second argument is a context-specific Python
+object significant only to the code using that context. For example, an
+interface context might use that object to store a `TInterface` token,
+interface name, or even an OVSDB UUID relevant to that interface.
+
+The context-specific object is available to code in the `run()` method of
+commands registered in that context by calling the `context_get()` method.
+It is automatically discarded when the user exits that context.
 
 

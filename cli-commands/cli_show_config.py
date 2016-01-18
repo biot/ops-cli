@@ -13,13 +13,35 @@
 #  License for the specific language governing permissions and limitations
 #  under the License.
 
-(
-    # Indicates the command may be prefixed by 'no', with all options
-    # unchanged.
-    F_NO,
+import config.cli
 
-    # When specified, the command is valid without any options. The default
-    # means at least one option must be given.
-    F_NO_OPTS_OK
+from opscli.command import *
+from opscli.output import *
 
-) = range(2)
+
+INDENT = ' ' * 4
+
+# Order in which subsystem config is generated.
+subsystems = (
+    'global',
+    'lldp',
+    'lacp',
+    'logrotate',
+    'aaa',
+    'radius',
+    'vlan',
+)
+
+
+class Show_running_config(Command):
+    '''Current running configuration'''
+    command = 'show running-configuration'
+
+    def run(self, opts, flags):
+        lines = config.cli.generate_config()
+        for line in lines:
+            line = line.replace('\t', INDENT)
+            cli_out(line)
+
+
+register_commands((Show_running_config,))

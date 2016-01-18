@@ -12,12 +12,14 @@ Features
 * Per-subsystem debug facility
 * Tokenizing parser with automatic type checking
 * Expressive command module syntax for declaring options
+* Nested contexts with custom command trees
+* Running config infrastructure
 
 TODO
 ====
 * Better exception/error message integration
 * Options ordering
-* Nested contexts
+* Better OVSDB link
 * Full page help on commands
 * Terminal size and paging
 * Output filter (grep, skip)

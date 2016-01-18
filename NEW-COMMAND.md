@@ -30,14 +30,15 @@ custom Python files in that directory that aren't picked up by the command
 module loader.
 
 A command is a class definition with a parent class `Command`, as defined
-in `opscli.cli`. A command module can have any number of these defined. The
-module must also define a variable `commands`, a tuple listing the commands
-to be entered into the CLI's syntax tree.
+in `opscli.command`. A command module can have any number of these defined.
+
+The module must also register its commands into the command tree, by calling
+the `register_commands()` function with a tuple listing the commands.
 
 Here's a bare-bones command module:
 
 ```python
-from opscli.cli import Command
+from opscli.command import *
 from opscli.output import *
 
 class Show_version(Command):
@@ -48,7 +49,7 @@ class Show_version(Command):
         cli_out('Version 0.1')
 
 
-commands = (Show_version,)
+register_commands((Show_version,))
 ```
 
 The [docstring](https://www.python.org/dev/peps/pep-0257/) under the class
@@ -69,14 +70,10 @@ invokes the command (or a shortened, non-ambiguous version of it).
 options were defined for the command above, so this will be empty.
 `flags` is a list of flags that apply.
 
-Note the `commands` tuple has a trailing comma. This is Python syntax
-indicating it's a tuple, not just an expression. It's only needed if
-you declare just one command.
-
 Let's add some options to the command:
 
 ```python
-from opscli.cli import Command
+from opscli.command import *
 from opscli.output import *
 
 class Show_version(Command):
@@ -93,7 +90,7 @@ class Show_version(Command):
             cli_out('Software version 0.1')
 
 
-commands = (Show_version,)
+register_commands((Show_version,))
 ```
 
 Those options are available from the built-in help system:
@@ -261,7 +258,7 @@ switch> set ?
 switch> set
 ```
 
-Don't forget to add dummy commands to your `commands` variable in the module!
+Don't forget to add dummy commands to your `register_commands()` call!
 
 Let's take a look at one more token type: strings. These are a set of strings
 the user can specify:
@@ -332,8 +329,8 @@ Summary
 -------
 
 * Command modules have to start with `cli_` and end with `.py`.
-* Commands are classes derived from the Command class, and must be listed
-  in the `commands` variable in the module file.
+* Commands are classes derived from the Command class, and must be registered
+  with a call to `register_commands()`.
 * The `run()` method is invoked only with a correct syntax, as defined
   by the command string and options.
 * You can structure options by choosing their type: `Opt_one` allows
