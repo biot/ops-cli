@@ -19,7 +19,6 @@ from opscli.tokens import TInteger
 from opscli.options import Opt_one
 from opscli.context import *
 from opscli.output import *
-from exit import Exit
 import opscli.ovsdb as ovsdb
 
 
@@ -33,7 +32,7 @@ class Shutdown(Command):
         cli_out(opts)
 
 
-register_commands((Shutdown, Exit), tree='vlan')
+register_commands((Shutdown,), tree='vlan')
 
 
 class Conf_vlan(Command):
@@ -52,7 +51,7 @@ class Conf_vlan(Command):
         context_push('vlan', obj=v)
 
 
-register_commands((Conf_vlan, Exit), tree='config')
+register_commands((Conf_vlan,), tree='config')
 
 
 class Show_vlan(Command):

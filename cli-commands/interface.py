@@ -17,7 +17,6 @@ from opscli.command import *
 from opscli.options import *
 from opscli.flags import *
 from opscli.context import *
-from exit import Exit
 
 
 class Shutdown(Command):
@@ -30,7 +29,7 @@ class Shutdown(Command):
         cli_out(opts)
 
 
-register_commands((Shutdown, Exit), tree='interface')
+register_commands((Shutdown,), tree='interface')
 
 
 class Interface(Command):

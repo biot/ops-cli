@@ -26,6 +26,10 @@ def dbg(msg):
     logline('cli', msg)
 
 
+def list_cmdtrees():
+    return list(_command_trees)
+
+
 def get_cmdtree(name):
     if name not in _command_trees:
         raise Exception("no command tree '%s'" % name)

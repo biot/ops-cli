@@ -32,6 +32,8 @@ from opscli.options import Option, complete_options, help_options
 from opscli.options import tokenize_options, check_required_options
 import opscli.ovsdb as ovsdb
 from opscli.debug import logline, debug_is_on
+from stdcmd import Exit
+
 
 HISTORY_FILE = '~/.opscli_history'
 # Number of lines to remember across sessions.
@@ -62,21 +64,19 @@ class Opscli(HistoricalReader):
         except Exception as e:
             cli_err("Unable to connect to %s: %s." % (ovsdb_server, str(e)))
             raise Exception
+
         # Initialize command tree.
         register_commands(tuple())
-        context_push('root')
         for path in command_module_paths:
             if not os.path.isdir(path):
                 cli_warn("Ignoring invalid module path '%s'." % path)
                 continue
-            sys.path.insert(0, path)
-            for filename in os.listdir(path):
-                if filename[-3:] != '.py':
-                    continue
-                # Strip '.py'.
-                __import__(filename[:-3])
+            self.load_commands(path)
+        self.fixup_contexts()
+        context_push('root')
         if debug_is_on('cli'):
             context_get().cmdtree.dump_tree()
+
         self.init_ctrl_c()
         self.init_qhelp()
         self.init_completion()
@@ -88,6 +88,22 @@ class Opscli(HistoricalReader):
         extra = '0123456789_-'
         for c in extra:
             self.syntax_table[unichr(ord(c))] = 1
+
+    def load_commands(self, path):
+        sys.path.insert(0, path)
+        for filename in os.listdir(path):
+            if filename[-3:] != '.py':
+                continue
+            # Strip '.py'.
+            __import__(filename[:-3])
+
+    def fixup_contexts(self):
+        '''Add exit command to every non-root command tree.'''
+        trees = list_cmdtrees()
+        for tree in trees:
+            if tree == 'root':
+                continue
+            register_commands((Exit,), tree=tree)
 
     def init_ctrl_c(self):
         class ctrl_c(pyrepl.commands.Command):
