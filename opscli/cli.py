@@ -286,11 +286,9 @@ class Opscli(HistoricalReader):
 
     def make_prompt(self):
         context = ''
-        prompt_mode = PROMPT_READ
         for ctx_name in context_names()[1:]:
             context += "(%s)" % ctx_name
-            prompt_mode = PROMPT_WRITE
-        prompt = self.prompt_base + context + prompt_mode
+        prompt = self.prompt_base + context + PROMPT_CHAR
         return prompt
 
     def start_shell(self):

@@ -17,8 +17,7 @@ import sys
 from collections import OrderedDict as OD
 
 CLI_MSG_MOTD = 'OpenSwitch shell'
-PROMPT_READ = '> '
-PROMPT_WRITE = '# '
+PROMPT_CHAR = '# '
 
 CLI_ERR_NOCOMMAND = '% No such command.'
 CLI_ERR_INCOMPLETE = '% Incomplete command.'
