@@ -15,8 +15,8 @@
 
 from opscli.command import *
 from opscli.output import *
-from opscli.options import Opt_one
-from opscli.tokens import TInteger
+from opscli.options import *
+from opscli.tokens import *
 
 
 class Show_version(Command):

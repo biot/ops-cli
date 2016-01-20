@@ -27,9 +27,8 @@ from opscli.context import *
 from opscli.stringhelp import Str_help
 from opscli.flags import *
 from opscli.output import *
-from opscli.tokens import Token, TKeyword
-from opscli.options import Option, complete_options, help_options
-from opscli.options import tokenize_options, check_required_options
+from opscli.tokens import *
+from opscli.options import *
 import opscli.ovsdb as ovsdb
 from opscli.debug import logline, debug_is_on
 from stdcmd import Exit

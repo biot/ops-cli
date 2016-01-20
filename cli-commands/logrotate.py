@@ -14,8 +14,8 @@
 # under the License.
 
 from opscli.command import *
-from opscli.tokens import TInteger, TString
-from opscli.options import Opt_all_order
+from opscli.tokens import *
+from opscli.options import *
 from opscli.output import *
 
 

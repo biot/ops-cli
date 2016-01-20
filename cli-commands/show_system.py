@@ -14,7 +14,7 @@
 # under the License.
 
 from opscli.command import *
-from opscli.output import out_kv
+from opscli.output import *
 import opscli.ovsdb as ovsdb
 
 

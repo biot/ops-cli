@@ -15,9 +15,9 @@
 
 from opscli.command import *
 from opscli.flags import *
-from opscli.tokens import TKeyword, TInterface
-from opscli.options import Opt_one
-from opscli.output import out_kv, cli_out, cli_warn, cli_err
+from opscli.tokens import *
+from opscli.options import *
+from opscli.output import *
 from ops.interface import get_interface, get_interface_list
 
 

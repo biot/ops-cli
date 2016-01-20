@@ -179,7 +179,7 @@ they are TKeyword objects.
 Here's an example of an option that uses a TInteger object:
 
 ```python
-from opscli.tokens import TInteger
+from opscli.tokens import *
 
 class Set_protocol_version(Command):
     '''Set protocol version'''

@@ -15,10 +15,9 @@
 
 from opscli.command import *
 from opscli.flags import *
-from opscli.options import Opt_one
-from opscli.output import cli_out
-from opscli.debug import debug_available, debug_enabled
-from opscli.debug import debug_enable, debug_disable
+from opscli.options import *
+from opscli.output import *
+from opscli.debug import *
 
 
 class Debug(Command):

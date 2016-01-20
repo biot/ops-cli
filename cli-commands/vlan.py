@@ -15,8 +15,8 @@
 
 from opscli.command import *
 from opscli.flags import *
-from opscli.tokens import TInteger
-from opscli.options import Opt_one
+from opscli.tokens import *
+from opscli.options import *
 from opscli.context import *
 from opscli.output import *
 import opscli.ovsdb as ovsdb
