@@ -168,7 +168,7 @@ class Opscli(HistoricalReader):
         else:
             # On empty line: show all top-level commands.
             for key in cmdtree.branch:
-                items.extend(self.get_help_subtree(cmdtree.branch[key]))
+                items.append(self.helpline(cmdtree.branch[key]))
 
         return items
 
@@ -399,11 +399,7 @@ class Opscli(HistoricalReader):
 
     def get_help_subtree(self, cmdobj):
         lines = []
-        # Only show real entries in the tree.
-        if hasattr(cmdobj, 'run'):
-            lines.append(self.helpline(cmdobj))
-        for key in cmdobj.branch:
-            lines.extend(self.get_help_subtree(cmdobj.branch[key]))
+        lines.append(self.helpline(cmdobj))
         return lines
 
     def show_help(self, words):
