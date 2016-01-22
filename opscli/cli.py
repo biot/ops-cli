@@ -304,10 +304,14 @@ class Opscli(HistoricalReader):
         self.console.beep()
 
     def make_prompt(self):
-        context = ''
-        for ctx_name in context_names()[1:]:
-            context += "(%s)" % ctx_name
-        prompt = self.prompt_base + context + PROMPT_CHAR
+        cur_context = context_get()
+        if cur_context.prompt is not None:
+            context_string = "(%s)" % cur_context.prompt
+        else:
+            context_string = ''
+            for ctx_name in context_names()[1:]:
+                context_string += "(%s)" % ctx_name
+        prompt = self.prompt_base + context_string + PROMPT_CHAR
         return prompt
 
     def start_shell(self):

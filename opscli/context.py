@@ -19,8 +19,8 @@ from opscli.cli import get_cmdtree
 _contexts = []
 
 
-def context_push(name, obj=None):
-    _contexts.append(Context(name, obj))
+def context_push(name, obj=None, prompt=None):
+    _contexts.append(Context(name, obj=obj, prompt=prompt))
 
 
 def context_pop():
@@ -44,7 +44,8 @@ def context_names():
 
 
 class Context:
-    def __init__(self, name, obj=None):
+    def __init__(self, name, obj=None, prompt=None):
         self.name = name
         self.cmdtree = get_cmdtree(name)
         self.obj = obj
+        self.prompt = prompt
