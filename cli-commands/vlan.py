@@ -47,8 +47,7 @@ class Conf_vlan(Command):
     )
 
     def run(self, opts, flags):
-        v = Vlan(opts[0])
-        context_push('vlan', obj=v)
+        context_push('vlan', obj=opts[0], prompt='config-vlan')
 
 
 register_commands((Conf_vlan,), tree='config')

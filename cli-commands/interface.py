@@ -46,7 +46,7 @@ class Interface(Command):
 
     def run(self, opts, flags):
         if isinstance(opts[0], TInterface):
-            context_push('interface', obj=opts[0])
+            context_push('interface', obj=opts[0], prompt='config-if')
 
 
 register_commands((Interface,), tree='config')
