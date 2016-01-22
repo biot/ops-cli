@@ -41,6 +41,7 @@ class Interface(Command):
             ('lag', 'Configure link-aggregation parameters'),
             ('mgmt', 'Configure management interface'),
             ('vlan', 'VLAN configuration'),
+            required=True,
         ),
     )
 
