@@ -146,14 +146,34 @@ class Opscli(HistoricalReader):
                 if len(matches) != 1:
                     raise Exception(CLI_ERR_AMBIGUOUS)
 
+                cmd_complete = False
                 cmdobj = matches[0]
                 for key in cmdobj.branch:
                     items.append(self.helpline(cmdobj.branch[key], words))
-                # Or maybe the command is complete, and has some options
-                # that can come next.
-                items.extend(help_options(cmdobj, words))
-                if F_NO_OPTS_OK in cmdobj.flags:
-                    # Command is complete by itself, too.
+                if hasattr(cmdobj, 'options'):
+                    opt_words = words[len(cmdobj.command):]
+                    if not opt_words and F_NO_OPTS_OK in cmdobj.flags:
+                        # Didn't use any options, but that's ok.
+                        cmd_complete = True
+                    elif len(opt_words) == len(cmdobj.options):
+                        # Used all options, definitely a complete command.
+                        cmd_complete = True
+                    elif opt_words:
+                        # Only some options were used, check if we missed
+                        # any required ones.
+                        try:
+                            opt_tokens = tokenize_options(opt_words,
+                                                          cmdobj.options)
+                            check_required_options(opt_tokens, cmdobj.options)
+                            # Didn't bomb out, so all is well.
+                            cmd_complete = True
+                        except:
+                            pass
+                    items.extend(help_options(cmdobj, words))
+                else:
+                    # Command has no options.
+                    cmd_complete = True
+                if cmd_complete and hasattr(cmdobj, 'run'):
                     items.insert(0, Str_help(('<cr>', cmdobj.__doc__)))
             else:
                 # Possibly incomplete match, not ending in space.
