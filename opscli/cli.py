@@ -189,7 +189,7 @@ class Opscli(HistoricalReader):
             for key in cmdtree.branch:
                 items.append(self.helpline(cmdtree.branch[key]))
 
-        return items
+        return sorted(items)
 
     def init_completion(self):
         class rdr_complete(pyrepl.commands.Command):
