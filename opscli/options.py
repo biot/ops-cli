@@ -201,10 +201,15 @@ class Opt_any(Option):
         return matches
 
     def next_token(self, words):
-        matches = self.match(words[1:])
+        matches = self.match(words)
+        # Create an extra set of references to this option's arguments.
         tokens = list(self.args)
         for match in matches:
-            tokens.remove(match.parent)
+            for t in range(len(tokens)):
+                # Don't offer unnailed matches again.
+                if id(match.parent) == id(tokens[t]):
+                    del tokens[t]
+                    break
 
         return tokens
 
