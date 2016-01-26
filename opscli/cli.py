@@ -137,7 +137,7 @@ class Opscli(HistoricalReader):
         words = line.split()
         cmdtree = context_get().cmdtree
         if words:
-            matches = self.find_partial_command(cmdtree, words, [])
+            matches = self.find_command(cmdtree, words)
             if not matches:
                 raise Exception(CLI_ERR_NOMATCH)
             if line[-1].isspace():
@@ -185,9 +185,15 @@ class Opscli(HistoricalReader):
                         # Must be an option.
                         items.extend(complete_options(cmdobj, words))
         else:
-            # On empty line: show all top-level commands.
+            # On empty line: show all commands in this context.
             for key in cmdtree.branch:
                 items.append(self.helpline(cmdtree.branch[key]))
+            try:
+                global_tree = get_cmdtree('global')
+                for key in global_tree.branch:
+                    items.append(self.helpline(global_tree.branch[key]))
+            except ValueError:
+                pass
 
         return sorted(items)
 
@@ -212,7 +218,7 @@ class Opscli(HistoricalReader):
             return
         words = line.split()
         cmdtree = context_get().cmdtree
-        matches = self.find_partial_command(cmdtree, words, [])
+        matches = self.find_command(cmdtree, words)
         if not matches:
             return
 
@@ -372,6 +378,19 @@ class Opscli(HistoricalReader):
                                                      words[1:], matches)
         return matches
 
+    def find_command(self, cmdobj, words):
+        matches = self.find_partial_command(cmdobj, words, [])
+
+        if not matches:
+            # Try the 'global' command tree as a last resort.
+            try:
+                global_tree = get_cmdtree('global')
+                matches = self.find_partial_command(global_tree, words, [])
+            except ValueError:
+                pass
+
+        return matches
+
     def run_command(self, words):
         if words[0] == 'help':
             self.show_help(words[1:])
@@ -384,7 +403,7 @@ class Opscli(HistoricalReader):
             flags.append(F_NO)
 
         cmdtree = context_get().cmdtree
-        matches = self.find_partial_command(cmdtree, words, [])
+        matches = self.find_command(cmdtree, words)
         if len(matches) == 0 or len(matches) > 1:
             # Either nothing matched, or more than one command matched.
             raise Exception(CLI_ERR_NOCOMMAND)
@@ -433,7 +452,7 @@ class Opscli(HistoricalReader):
                 items.extend(self.get_help_subtree(cmdtree.branch[key]))
             cli_help(items)
         else:
-            matches = self.find_partial_command(cmdtree, words, [])
+            matches = self.find_command(cmdtree, words)
             if len(matches) == 0:
                 cli_err(CLI_ERR_NOHELP_UNK)
             elif len(matches) > 1:
