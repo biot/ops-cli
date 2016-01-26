@@ -29,8 +29,6 @@ class Configure(Command):
             ('terminal', 'Configure from terminal'),
         ),
     )
-    # Only from top level context.
-    context = [None]
 
     def run(self, opts, flags):
         context_push('config')

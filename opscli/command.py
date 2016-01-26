@@ -107,7 +107,7 @@ class Command:
     # Instantiate a Command object in the right place
     def insert_command(self, cmdclass):
         self.check_command(cmdclass)
-        dbg("adding %s command %s." % (self.command[0], cmdclass.__name__))
+        dbg("adding %s:%s." % (self.command[0], cmdclass.__name__))
         prev = None
         cur = self
         for word in cmdclass.command.split():
@@ -129,7 +129,7 @@ class Command:
             # It might still be a dummy, but that branch has to be kept.
             if cmdobj.branch:
                 # Shouldn't happen.
-                raise exception("dupe!")
+                raise Exception("dupe!")
             cmdobj.branch = self.branch[word].branch
         # Don't overwrite an existing branch, unless it was a dummy.
         if word not in self.branch or self.branch[word].is_dummy:

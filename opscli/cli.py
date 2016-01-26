@@ -65,7 +65,6 @@ class Opscli(HistoricalReader):
             raise Exception
 
         # Initialize command tree.
-        register_commands(tuple())
         for path in command_module_paths:
             if not os.path.isdir(path):
                 cli_warn("Ignoring invalid module path '%s'." % path)
