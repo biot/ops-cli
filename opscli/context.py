@@ -31,8 +31,14 @@ def context_pop():
         return True
 
 
-def context_get():
-    return _contexts[-1]
+def context_get(name=None):
+    if name:
+        for ctx in _contexts:
+            if ctx.name == name:
+                return ctx
+        raise ValueError("unknown context")
+    else:
+        return _contexts[-1]
 
 
 def context_names():
