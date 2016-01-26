@@ -44,4 +44,4 @@ class Show_running_config(Command):
             cli_out(line)
 
 
-register_commands((Show_running_config,))
+register_commands((Show_running_config,), tree='global')

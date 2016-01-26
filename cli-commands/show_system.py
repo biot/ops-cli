@@ -41,4 +41,4 @@ class Show_system_fan(Command):
         out_kv('system-fan', data)
 
 
-register_commands((Show, Show_system, Show_system_fan))
+register_commands((Show, Show_system, Show_system_fan), tree='global')

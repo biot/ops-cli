@@ -71,4 +71,4 @@ class Show_interface(Command):
                 out_kv(keymap, data)
 
 
-register_commands((Show_interface,))
+register_commands((Show_interface,), tree='global')

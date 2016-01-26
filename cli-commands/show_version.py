@@ -55,4 +55,4 @@ class Set_protocol_version(Command):
         cli_out("Setting protocol version %s" % opts[0])
 
 
-register_commands((Show_version, Set, Set_protocol_version))
+register_commands((Show_version, Set, Set_protocol_version), tree='global')

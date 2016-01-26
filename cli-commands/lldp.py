@@ -281,4 +281,4 @@ class Show_lldp(Command):
                 opts.pop(0)
 
 
-register_commands((Show_lldp,))
+register_commands((Show_lldp,), tree='global')

@@ -48,4 +48,4 @@ class Show_debug(Command):
             cli_out(key)
 
 
-register_commands((Debug, Show_debug))
+register_commands((Debug, Show_debug), tree='global')

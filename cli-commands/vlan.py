@@ -100,4 +100,4 @@ class Show_vlan(Command):
         # TODO
 
 
-register_commands((Show_vlan,))
+register_commands((Show_vlan,), tree='global')
