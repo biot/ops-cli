@@ -366,7 +366,7 @@ class Opscli(HistoricalReader):
             return matches
         for key in cmdobj.branch:
             if key.startswith(words[0]):
-                # word is a partial match for this command.
+                # Word is a partial match for this command.
                 if len(words) == 1:
                     # Found a match on all words.
                     last = cmdobj.branch[key]
@@ -379,6 +379,19 @@ class Opscli(HistoricalReader):
 
     def find_command(self, cmdobj, words):
         matches = self.find_partial_command(cmdobj, words, [])
+
+        if not matches:
+            # Try matching the command in contexts up the stack, all
+            # the way up to root.
+            stack = context_names()
+            while not matches and stack.pop() != 'root':
+                context = context_get(stack[-1])
+                matches = self.find_partial_command(context.cmdtree, words, [])
+            if matches:
+                # Found a match, but we better back out of this context
+                # up to where we found the match.
+                while context_get().name != stack[-1]:
+                    context_pop()
 
         if not matches:
             # Try the 'global' command tree as a last resort.
