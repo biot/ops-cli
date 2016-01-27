@@ -14,6 +14,7 @@
 # under the License.
 
 from opscli.command import *
+from opscli.output import *
 from opscli.context import *
 
 
@@ -25,6 +26,9 @@ class Quit(Command):
         return False
 
 
+register_commands((Quit,))
+
+
 class Exit(Command):
     '''Exit current mode and down to previous mode'''
     command = 'exit'
@@ -34,4 +38,20 @@ class Exit(Command):
             return False
 
 
-register_commands((Quit,))
+class Pwc(Command):
+    '''Show current configuration context'''
+    command = 'pwc'
+
+    def run(self, opts, flags):
+        indent = 0
+        for ctx_name in context_names()[1:]:
+            context = context_get(ctx_name)
+            cli_wrt(' ' * indent * 2)
+            cli_wrt(context.name)
+            if context.obj is not None:
+                cli_wrt(' ' + str(context.obj))
+            cli_out()
+            indent += 1
+
+
+register_commands((Pwc,), 'global')
